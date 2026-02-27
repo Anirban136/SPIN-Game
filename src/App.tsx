@@ -16,11 +16,6 @@ import {
   X, 
   ChevronRight,
   Info,
-  
-  Globe,
-  Users,
-  Copy,
-  Check,
   Volume2,
   VolumeX,
   Settings,
@@ -403,70 +398,6 @@ const PremiumLock = ({ mode, onUnlock }: { mode: ModeConfig, onUnlock: () => voi
   );
 };
 
-const LongDistancePairing = ({ 
-  onPair, 
-  onHost 
-}: { 
-  onPair: (code: string) => void, 
-  onHost: () => void 
-}) => {
-  const [code, setCode] = useState('');
-  const [error, setError] = useState('');
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-md w-full glass-panel p-8 space-y-6"
-    >
-      <div className="text-center space-y-2">
-        <div className="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-4 glow-indigo">
-          <Globe className="w-8 h-8 text-indigo-400" />
-        </div>
-        <h2 className="text-2xl font-serif italic">Long Distance Mode</h2>
-        <p className="text-gray-400 text-sm">Connect with your partner anywhere in the world.</p>
-      </div>
-
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <button 
-            onClick={onHost}
-            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 transition-colors rounded-xl font-bold flex items-center justify-center gap-2"
-          >
-            <Sparkles className="w-5 h-5" />
-            Generate Pairing Code
-          </button>
-        </div>
-
-        <div className="relative flex items-center">
-          <div className="flex-grow border-t border-white/10" />
-          <span className="px-4 text-xs text-gray-500 uppercase font-bold">OR</span>
-          <div className="flex-grow border-t border-white/10" />
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-xs uppercase tracking-widest text-gray-500 font-bold">Enter Partner's Code</label>
-          <div className="flex gap-2">
-            <input 
-              type="text" 
-              placeholder="ABCDEF"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              className="flex-1 bg-white/5 border border-white/10 rounded-lg p-3 focus:outline-none focus:border-indigo-500 transition-colors text-center font-mono tracking-widest"
-            />
-            <button 
-              onClick={() => onPair(code)}
-              className="px-6 bg-white/10 hover:bg-white/20 rounded-lg font-bold transition-colors"
-            >
-              Pair
-            </button>
-          </div>
-          {error && <p className="text-red-400 text-xs text-center">{error}</p>}
-        </div>
-      </div>
-    </motion.div>
-  );
-};
 
 const AdminLogin = ({ 
   onLogin, 
@@ -752,28 +683,8 @@ export default function App() {
     return () => window.removeEventListener('mousemove', handleGlobalMouseMove);
   }, []);
 
-  // Long Distance State
-  const [isLongDistance, setIsLongDistance] = useState(false);
-  const [roomCode, setRoomCode] = useState<string | null>(null);
-  const [isPaired, setIsPaired] = useState(false);
-  // No realtime: local pairing only (no socket/server)
+  // (long-distance feature removed, app is now purely local)
   const [remoteRotation, setRemoteRotation] = useState<number | undefined>(undefined);
-  const [copied, setCopied] = useState(false);
-  // Local pairing helpers (no server): generate a code or enter a partner's code.
-  const handleGenerateCode = () => {
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setRoomCode(code);
-    setIsPaired(false);
-    setIsLongDistance(true);
-    try { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {}
-  };
-
-  const handlePair = (code: string) => {
-    // Local pairing — mark paired locally. Note: this does NOT sync between devices without a server.
-    setRoomCode(code);
-    setIsPaired(true);
-    setIsLongDistance(true);
-  };
 
   const handleModeChange = (mode: ModeConfig) => {
     if (isSpinning) return;
@@ -835,65 +746,12 @@ export default function App() {
           >
             {isMuted ? <VolumeX className="w-5 h-5 text-gray-400" /> : <Volume2 className="w-5 h-5 text-romantic-pink" />}
           </button>
-          {!isLongDistance && (
-            <button 
-              onClick={() => setIsLongDistance(true)}
-              className="p-2 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 transition-colors flex items-center gap-2 px-4"
-            >
-              <Globe className="w-4 h-4 text-indigo-400" />
-              <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">Long Distance</span>
-            </button>
-          )}
           <button className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
             <Info className="w-5 h-5 text-gray-400" />
           </button>
         </div>
       </header>
 
-      {isLongDistance && !isPaired ? (
-        <div className="flex-1 flex items-center justify-center">
-          {roomCode ? (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="max-w-md w-full glass-panel p-8 text-center space-y-6"
-            >
-              <div className="space-y-2">
-                <h2 className="text-xl font-bold">Your Pairing Code</h2>
-                <p className="text-gray-400 text-sm">Share this code with your partner to start the session.</p>
-              </div>
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col items-center gap-4">
-                <span className="text-4xl font-mono font-bold tracking-[0.5em] text-indigo-400">{roomCode}</span>
-                <button 
-                  onClick={copyCode}
-                  className="flex items-center gap-2 text-xs text-gray-400 hover:text-white transition-colors"
-                >
-                  {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-                  {copied ? 'Copied!' : 'Copy Code'}
-                </button>
-              </div>
-              <div className="flex items-center justify-center gap-3 text-indigo-400 animate-pulse">
-                <Users className="w-5 h-5" />
-                <span className="text-sm font-medium">Waiting for partner...</span>
-              </div>
-              <button 
-                onClick={() => {
-                  setIsLongDistance(false);
-                  setRoomCode(null);
-                }}
-                className="text-xs text-gray-500 hover:text-white transition-colors underline underline-offset-4"
-              >
-                Cancel and Play Solo
-              </button>
-            </motion.div>
-          ) : (
-            <LongDistancePairing 
-              onHost={handleGenerateCode}
-              onPair={handlePair}
-            />
-          )}
-        </div>
-      ) : (
         <>
           {/* Mode Selector */}
           <div className="mb-12 overflow-x-auto no-scrollbar flex gap-4 pb-4">
