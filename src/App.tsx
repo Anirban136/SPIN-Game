@@ -16,7 +16,7 @@ import {
   X, 
   ChevronRight,
   Info,
-  AlertCircle,
+  
   Globe,
   Users,
   Copy,
@@ -72,72 +72,7 @@ const AgeVerification = ({ onVerify }: { onVerify: () => void }) => {
   );
 };
 
-const ConsentModal = ({ mode, onConfirm, onCancel }: { mode: ModeConfig, onConfirm: () => void, onCancel: () => void }) => {
-  const [safeWord, setSafeWord] = useState('');
 
-  return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm"
-    >
-      <motion.div 
-        initial={{ scale: 0.9, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        className="max-w-md w-full glass-panel p-8 space-y-6"
-      >
-        <div className="flex items-center gap-3 text-amber-400">
-          <AlertCircle className="w-6 h-6" />
-          <h2 className="text-xl font-bold">Mutual Consent Required</h2>
-        </div>
-        <p className="text-gray-300">
-          You are entering <span className="text-white font-bold">{mode.name} Mode</span>. This mode contains more advanced and bold activities.
-        </p>
-        <ul className="space-y-2 text-sm text-gray-400">
-          <li className="flex gap-2 items-start">
-            <div className="w-1.5 h-1.5 rounded-full bg-romantic-pink mt-1.5 shrink-0" />
-            Both partners must explicitly agree to participate.
-          </li>
-          <li className="flex gap-2 items-start">
-            <div className="w-1.5 h-1.5 rounded-full bg-romantic-pink mt-1.5 shrink-0" />
-            You can stop or change modes at any time.
-          </li>
-          <li className="flex gap-2 items-start">
-            <div className="w-1.5 h-1.5 rounded-full bg-romantic-pink mt-1.5 shrink-0" />
-            Respect each other's boundaries.
-          </li>
-        </ul>
-        
-        <div className="space-y-2">
-          <label className="text-xs uppercase tracking-widest text-gray-500 font-bold">Optional Safe Word</label>
-          <input 
-            type="text" 
-            placeholder="e.g. Red Light"
-            value={safeWord}
-            onChange={(e) => setSafeWord(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-lg p-3 focus:outline-none focus:border-romantic-pink transition-colors"
-          />
-        </div>
-
-        <div className="flex gap-3 pt-4">
-          <button 
-            onClick={onCancel}
-            className="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-semibold transition-colors"
-          >
-            Go Back
-          </button>
-          <button 
-            onClick={onConfirm}
-            className="flex-1 py-3 bg-romantic-pink hover:bg-rose-600 rounded-xl font-semibold transition-colors"
-          >
-            We Consent
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-};
 
 const Wheel = ({ 
   tasks, 
@@ -798,11 +733,8 @@ export default function App() {
   const [isAgeVerified, setIsAgeVerified] = useState(false);
   const [modes, setModes] = useState<ModeConfig[]>(MODES);
   const [currentMode, setCurrentMode] = useState<ModeConfig>(MODES[0]);
-  const [pendingMode, setPendingMode] = useState<ModeConfig | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const [resultTask, setResultTask] = useState<Task | null>(null);
-  const [showConsent, setShowConsent] = useState(false);
-  const [consentedModes, setConsentedModes] = useState<Set<Mode>>(new Set());
   const [unlockedModes, setUnlockedModes] = useState<Set<Mode>>(new Set([Mode.FLIRTY, Mode.HOT]));
   const [isMuted, setIsMuted] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -846,11 +778,7 @@ export default function App() {
   const handleModeChange = (mode: ModeConfig) => {
     if (isSpinning) return;
     
-    if (mode.requiresConsent && !consentedModes.has(mode.id)) {
-      setPendingMode(mode);
-      setShowConsent(true);
-      return;
-    }
+    // requiresConsent removed from modes; directly set mode.
     
     setCurrentMode(mode);
   };
@@ -860,14 +788,7 @@ export default function App() {
     setModes(newConfig);
   };
 
-  const handleConsentConfirm = () => {
-    if (pendingMode) {
-      setConsentedModes(prev => new Set(prev).add(pendingMode.id));
-      setCurrentMode(pendingMode);
-      setPendingMode(null);
-    }
-    setShowConsent(false);
-  };
+
 
   const handleSpinStart = (rotation: number) => {
     // No-op for static deployment (no realtime sync).
@@ -1080,16 +1001,7 @@ export default function App() {
             onClose={() => setIsAdmin(false)} 
           />
         )}
-        {showConsent && pendingMode && (
-          <ConsentModal 
-            mode={pendingMode} 
-            onConfirm={handleConsentConfirm} 
-            onCancel={() => {
-              setShowConsent(false);
-              setPendingMode(null);
-            }} 
-          />
-        )}
+        
         {resultTask && (
           <TaskResultModal 
             task={resultTask} 
