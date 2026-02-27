@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  
+  --color-romantic-black: #050505;
+  --color-romantic-purple: #1a0b2e;
+  --color-romantic-pink: #ff2d55;
+}
+
+body {
+  @apply bg-romantic-black text-white font-sans overflow-x-hidden;
+  background: 
+    radial-gradient(circle at top right, rgba(26, 11, 46, 0.8) 0%, rgba(5, 5, 5, 0.95) 100%),
+    url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 40V38L0 38V40zm0-2h2V0H0v38zm4 0h2V4H4v34zm4 0h2V0H8v38zm4 0h2V4h-2v34zm4 0h2V0h-2v38zm4 0h2V4h-2v34zm4 0h2V0h-2v38zm4 0h2V4h-2v34zm4 0h2V0h-2v38z'/%3E%3C/g%3E%3C/svg%3E");
+  min-height: 100vh;
+}
+
+.glass-panel {
+  @apply bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl;
+}
+
+.glow-pink {
+  box-shadow: 0 0 20px rgba(255, 45, 85, 0.3);
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
