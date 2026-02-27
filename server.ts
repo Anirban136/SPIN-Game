@@ -131,7 +131,7 @@ async function startServer() {
     },
   });
 
-  const PORT = 3000;
+  const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
   // In-memory room storage
   const rooms = new Map<string, { players: string[]; state: any }>();

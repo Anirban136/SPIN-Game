@@ -6,6 +6,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { io, Socket } from 'socket.io-client';
+
+// use Vite env variable to point to the deployed socket server
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || '';
+
 import { 
   Heart, 
   Flame, 
@@ -831,7 +835,7 @@ export default function App() {
 
   useEffect(() => {
     if (isLongDistance && !socket) {
-      const newSocket = io();
+      const newSocket = SERVER_URL ? io(SERVER_URL) : io();
       setSocket(newSocket);
 
       newSocket.on('config-update', (newConfig) => {
