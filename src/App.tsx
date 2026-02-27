@@ -5,11 +5,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { io, Socket } from 'socket.io-client';
-
-// use Vite env variable to point to the deployed socket server
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || '';
-
 import { 
   Heart, 
   Flame, 
@@ -829,52 +824,24 @@ export default function App() {
   const [isLongDistance, setIsLongDistance] = useState(false);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [isPaired, setIsPaired] = useState(false);
-  const [socket, setSocket] = useState<Socket | null>(null);
+  // No realtime: local pairing only (no socket/server)
   const [remoteRotation, setRemoteRotation] = useState<number | undefined>(undefined);
   const [copied, setCopied] = useState(false);
+  // Local pairing helpers (no server): generate a code or enter a partner's code.
+  const handleGenerateCode = () => {
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    setRoomCode(code);
+    setIsPaired(false);
+    setIsLongDistance(true);
+    try { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch {}
+  };
 
-  useEffect(() => {
-    if (isLongDistance && !socket) {
-      const newSocket = SERVER_URL ? io(SERVER_URL) : io();
-      setSocket(newSocket);
-
-      newSocket.on('config-update', (newConfig) => {
-        setModes(newConfig);
-        // Sync current mode if it exists in new config
-        setCurrentMode(prev => newConfig.find((m: any) => m.id === prev.id) || newConfig[0]);
-      });
-
-      newSocket.on('room-created', (code) => {
-        setRoomCode(code);
-      });
-
-      newSocket.on('player-joined', ({ code }) => {
-        setRoomCode(code);
-        setIsPaired(true);
-      });
-
-      newSocket.on('wheel-spun', ({ rotation }) => {
-        setRemoteRotation(rotation);
-      });
-
-      newSocket.on('mode-changed', (modeId) => {
-        const mode = MODES.find(m => m.id === modeId);
-        if (mode) setCurrentMode(mode);
-      });
-
-      newSocket.on('player-left', () => {
-        setIsPaired(false);
-      });
-
-      newSocket.on('error', (msg) => {
-        alert(msg);
-      });
-
-      return () => {
-        newSocket.disconnect();
-      };
-    }
-  }, [isLongDistance]);
+  const handlePair = (code: string) => {
+    // Local pairing — mark paired locally. Note: this does NOT sync between devices without a server.
+    setRoomCode(code);
+    setIsPaired(true);
+    setIsLongDistance(true);
+  };
 
   const handleModeChange = (mode: ModeConfig) => {
     if (isSpinning) return;
@@ -886,33 +853,24 @@ export default function App() {
     }
     
     setCurrentMode(mode);
-    if (isPaired && socket && roomCode) {
-      socket.emit('change-mode', { code: roomCode, modeId: mode.id });
-    }
   };
 
   const handleConfigUpdate = (newConfig: ModeConfig[]) => {
-    if (socket) {
-      socket.emit('update-config', newConfig);
-    }
+    // No realtime backend in this deployment; apply locally.
+    setModes(newConfig);
   };
 
   const handleConsentConfirm = () => {
     if (pendingMode) {
       setConsentedModes(prev => new Set(prev).add(pendingMode.id));
       setCurrentMode(pendingMode);
-      if (isPaired && socket && roomCode) {
-        socket.emit('change-mode', { code: roomCode, modeId: pendingMode.id });
-      }
       setPendingMode(null);
     }
     setShowConsent(false);
   };
 
   const handleSpinStart = (rotation: number) => {
-    if (isPaired && socket && roomCode) {
-      socket.emit('spin-wheel', { code: roomCode, rotation });
-    }
+    // No-op for static deployment (no realtime sync).
   };
 
   const copyCode = () => {
@@ -1001,8 +959,6 @@ export default function App() {
                 onClick={() => {
                   setIsLongDistance(false);
                   setRoomCode(null);
-                  socket?.disconnect();
-                  setSocket(null);
                 }}
                 className="text-xs text-gray-500 hover:text-white transition-colors underline underline-offset-4"
               >
@@ -1011,8 +967,8 @@ export default function App() {
             </motion.div>
           ) : (
             <LongDistancePairing 
-              onHost={() => socket?.emit('create-room')}
-              onPair={(code) => socket?.emit('join-room', code)}
+              onHost={handleGenerateCode}
+              onPair={handlePair}
             />
           )}
         </div>
