@@ -1,8 +1,17 @@
-import { Mode, ModeConfig } from './types';
+import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { createServer as createViteServer } from "vite";
+import path from "path";
+import { fileURLToPath } from "url";
 
-export const MODES: ModeConfig[] = [
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Initial configuration (moved from constants to server as source of truth)
+let gameConfig = [
   {
-    id: Mode.FLIRTY,
+    id: 'FLIRTY',
     name: 'Flirty',
     icon: '💕',
     description: 'Beginner – Romantic',
@@ -29,7 +38,7 @@ export const MODES: ModeConfig[] = [
     ],
   },
   {
-    id: Mode.HOT,
+    id: 'HOT',
     name: 'Hot',
     icon: '🔥',
     description: 'Intermediate – Passionate',
@@ -56,7 +65,7 @@ export const MODES: ModeConfig[] = [
     ],
   },
   {
-    id: Mode.NAUGHTY,
+    id: 'NAUGHTY',
     name: 'Naughty',
     icon: '😈',
     description: 'Advanced – Bold',
@@ -83,7 +92,7 @@ export const MODES: ModeConfig[] = [
     ],
   },
   {
-    id: Mode.HEAVENLY,
+    id: 'HEAVENLY',
     name: 'Heavenly',
     icon: '👼',
     description: 'Expert – Position Wheel',
@@ -110,3 +119,104 @@ export const MODES: ModeConfig[] = [
     ],
   },
 ];
+
+async function startServer() {
+  const app = express();
+  app.use(express.json({ limit: '50mb' }));
+  
+  const httpServer = createServer(app);
+  const io = new Server(httpServer, {
+    cors: {
+      origin: "*",
+    },
+  });
+
+  const PORT = 3000;
+
+  // In-memory room storage
+  const rooms = new Map<string, { players: string[]; state: any }>();
+
+  io.on("connection", (socket) => {
+    console.log("A user connected:", socket.id);
+
+    // Send current config on connect
+    socket.emit("config-update", gameConfig);
+
+    socket.on("create-room", () => {
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      rooms.set(code, { players: [socket.id], state: {} });
+      socket.join(code);
+      socket.emit("room-created", code);
+      console.log(`Room created: ${code} by ${socket.id}`);
+    });
+
+    socket.on("join-room", (code: string) => {
+      const room = rooms.get(code);
+      if (room) {
+        if (room.players.length < 2) {
+          room.players.push(socket.id);
+          socket.join(code);
+          io.to(code).emit("player-joined", {
+            count: room.players.length,
+            code,
+          });
+          console.log(`User ${socket.id} joined room: ${code}`);
+        } else {
+          socket.emit("error", "Room is full");
+        }
+      } else {
+        socket.emit("error", "Room not found");
+      }
+    });
+
+    socket.on("spin-wheel", ({ code, rotation, task }: { code: string; rotation: number; task: any }) => {
+      socket.to(code).emit("wheel-spun", { rotation, task });
+    });
+
+    socket.on("change-mode", ({ code, modeId }: { code: string; modeId: string }) => {
+      socket.to(code).emit("mode-changed", modeId);
+    });
+
+    socket.on("update-config", (newConfig: any) => {
+      gameConfig = newConfig;
+      io.emit("config-update", gameConfig);
+      console.log("Game configuration updated by admin");
+    });
+
+    socket.on("disconnect", () => {
+      console.log("User disconnected:", socket.id);
+      // Clean up rooms if needed
+      for (const [code, room] of rooms.entries()) {
+        if (room.players.includes(socket.id)) {
+          room.players = room.players.filter((id) => id !== socket.id);
+          if (room.players.length === 0) {
+            rooms.delete(code);
+            console.log(`Room ${code} deleted`);
+          } else {
+            io.to(code).emit("player-left");
+          }
+        }
+      }
+    });
+  });
+
+  // Vite middleware for development
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    app.use(express.static(path.join(__dirname, "dist")));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(__dirname, "dist", "index.html"));
+    });
+  }
+
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
+  });
+}
+
+startServer();

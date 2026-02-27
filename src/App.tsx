@@ -5,24 +5,18 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Heart, 
-  Flame, 
-  Ghost, 
-  Sparkles, 
-  RotateCcw, 
-  ShieldCheck, 
-  Lock, 
-  X, 
-  ChevronRight,
+import {
+  Sparkles,
+  RotateCcw,
+  ShieldCheck,
+  Lock,
   Info,
+  AlertCircle,
   Volume2,
   VolumeX,
   Settings,
-  Edit2,
   Save,
   Upload,
-  Plus,
   Trash2,
   ArrowLeft
 } from 'lucide-react';
@@ -33,7 +27,7 @@ import { MODES } from './constants';
 
 const AgeVerification = ({ onVerify }: { onVerify: () => void }) => {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-romantic-black p-6"
@@ -49,13 +43,13 @@ const AgeVerification = ({ onVerify }: { onVerify: () => void }) => {
           This application contains adult content intended for individuals aged 18 and over.
         </p>
         <div className="space-y-4">
-          <button 
+          <button
             onClick={onVerify}
             className="w-full py-4 bg-romantic-pink hover:bg-rose-600 transition-colors rounded-xl font-semibold text-lg"
           >
             I am 18+ and Consent
           </button>
-          <button 
+          <button
             className="w-full py-4 bg-white/10 hover:bg-white/20 transition-colors rounded-xl font-semibold"
             onClick={() => window.location.href = 'https://google.com'}
           >
@@ -67,77 +61,115 @@ const AgeVerification = ({ onVerify }: { onVerify: () => void }) => {
   );
 };
 
+const ConsentModal = ({ mode, onConfirm, onCancel }: { mode: ModeConfig, onConfirm: () => void, onCancel: () => void }) => {
+  const [safeWord, setSafeWord] = useState('');
 
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm"
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        className="max-w-md w-full glass-panel p-8 space-y-6"
+      >
+        <div className="flex items-center gap-3 text-amber-400">
+          <AlertCircle className="w-6 h-6" />
+          <h2 className="text-xl font-bold">Mutual Consent Required</h2>
+        </div>
+        <p className="text-gray-300">
+          You are entering <span className="text-white font-bold">{mode.name} Mode</span>. This mode contains more advanced and bold activities.
+        </p>
+        <ul className="space-y-2 text-sm text-gray-400">
+          <li className="flex gap-2 items-start">
+            <div className="w-1.5 h-1.5 rounded-full bg-romantic-pink mt-1.5 shrink-0" />
+            Both partners must explicitly agree to participate.
+          </li>
+          <li className="flex gap-2 items-start">
+            <div className="w-1.5 h-1.5 rounded-full bg-romantic-pink mt-1.5 shrink-0" />
+            You can stop or change modes at any time.
+          </li>
+          <li className="flex gap-2 items-start">
+            <div className="w-1.5 h-1.5 rounded-full bg-romantic-pink mt-1.5 shrink-0" />
+            Respect each other's boundaries.
+          </li>
+        </ul>
 
-const Wheel = ({ 
-  tasks, 
-  onResult, 
-  isSpinning, 
-  setIsSpinning, 
-  color, 
-  onSpinStart, 
-  remoteRotation, 
+        <div className="space-y-2">
+          <label className="text-xs uppercase tracking-widest text-gray-500 font-bold">Optional Safe Word</label>
+          <input
+            type="text"
+            placeholder="e.g. Red Light"
+            value={safeWord}
+            onChange={(e) => setSafeWord(e.target.value)}
+            className="w-full bg-white/5 border border-white/10 rounded-lg p-3 focus:outline-none focus:border-romantic-pink transition-colors"
+          />
+        </div>
+
+        <div className="flex gap-3 pt-4">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-semibold transition-colors"
+          >
+            Go Back
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-3 bg-romantic-pink hover:bg-rose-600 rounded-xl font-semibold transition-colors"
+          >
+            We Consent
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+const Wheel = ({
+  tasks,
+  onResult,
+  isSpinning,
+  setIsSpinning,
+  color,
+  onSpinStart,
+  remoteRotation,
   isMuted,
   onHoverTask
-}: { 
-  tasks: Task[], 
+}: {
+  tasks: Task[],
   onResult: (task: Task) => void,
   isSpinning: boolean,
   setIsSpinning: (val: boolean) => void,
   color: string,
-  onSpinStart?: (rotation: number) => void,
-  remoteRotation?: number,
   isMuted: boolean,
   onHoverTask: (task: Task | null) => void
 }) => {
   const [rotation, setRotation] = useState(0);
   const wheelRef = useRef<HTMLDivElement>(null);
-  
+
   const spinSound = useRef<HTMLAudioElement | null>(null);
   const stopSound = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     spinSound.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2005/2005-preview.mp3');
     stopSound.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
-    
+
     if (spinSound.current) spinSound.current.loop = true;
-    
+
     return () => {
       if (spinSound.current) spinSound.current.pause();
       if (stopSound.current) stopSound.current.pause();
     };
   }, []);
 
-  // Handle remote rotation
-  useEffect(() => {
-    if (remoteRotation !== undefined && remoteRotation !== rotation) {
-      setIsSpinning(true);
-      setRotation(remoteRotation);
-      
-      if (!isMuted && spinSound.current) {
-        spinSound.current.currentTime = 0;
-        spinSound.current.play().catch(() => {});
-      }
-      
-      setTimeout(() => {
-        setIsSpinning(false);
-        if (spinSound.current) spinSound.current.pause();
-        if (!isMuted && stopSound.current) {
-          stopSound.current.currentTime = 0;
-          stopSound.current.play().catch(() => {});
-        }
-        
-        const normalizedRotation = remoteRotation % 360;
-        const segmentSize = 360 / tasks.length;
-        const index = Math.floor(((360 - (normalizedRotation % 360)) % 360) / segmentSize);
-        onResult(tasks[index]);
-      }, 4000);
-    }
-  }, [remoteRotation]);
+
 
   const spin = () => {
     if (isSpinning) return;
-    
+
     setIsSpinning(true);
     onHoverTask(null);
     const extraSpins = 5 + Math.random() * 5;
@@ -146,21 +178,18 @@ const Wheel = ({
 
     if (!isMuted && spinSound.current) {
       spinSound.current.currentTime = 0;
-      spinSound.current.play().catch(() => {});
+      spinSound.current.play().catch(() => { });
     }
 
-    if (onSpinStart) {
-      onSpinStart(newRotation);
-    }
 
     setTimeout(() => {
       setIsSpinning(false);
       if (spinSound.current) spinSound.current.pause();
       if (!isMuted && stopSound.current) {
         stopSound.current.currentTime = 0;
-        stopSound.current.play().catch(() => {});
+        stopSound.current.play().catch(() => { });
       }
-      
+
       const normalizedRotation = newRotation % 360;
       const segmentSize = 360 / tasks.length;
       const index = Math.floor(((360 - (normalizedRotation % 360)) % 360) / segmentSize);
@@ -181,7 +210,7 @@ const Wheel = ({
       </div>
 
       {/* Wheel Container */}
-      <motion.div 
+      <motion.div
         ref={wheelRef}
         animate={{ rotate: rotation }}
         transition={{ duration: 4, ease: [0.15, 0, 0.15, 1] }}
@@ -193,7 +222,7 @@ const Wheel = ({
             const angle = 360 / tasks.length;
             const startAngle = i * angle;
             const endAngle = (i + 1) * angle;
-            
+
             const x1 = 50 + 50 * Math.cos((Math.PI * (startAngle - 90)) / 180);
             const y1 = 50 + 50 * Math.sin((Math.PI * (startAngle - 90)) / 180);
             const x2 = 50 + 50 * Math.cos((Math.PI * (endAngle - 90)) / 180);
@@ -210,13 +239,13 @@ const Wheel = ({
             const wedgeColor = colors[i % colors.length];
 
             return (
-              <g 
-                key={task.id} 
+              <g
+                key={task.id}
                 onMouseEnter={() => !isSpinning && onHoverTask(task)}
                 onMouseLeave={() => onHoverTask(null)}
                 className="cursor-help pointer-events-auto"
               >
-                <path 
+                <path
                   d={`M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`}
                   fill={wedgeColor}
                   stroke="rgba(255,255,255,0.2)"
@@ -236,19 +265,19 @@ const Wheel = ({
                 >
                   {task.text.length > 18 ? task.text.substring(0, 15) + '...' : task.text}
                 </text>
-                
+
                 {/* Decorative Stud */}
-                <circle 
-                  cx="50" 
-                  cy="5" 
-                  r="1.2" 
-                  fill="url(#studGradient)" 
+                <circle
+                  cx="50"
+                  cy="5"
+                  r="1.2"
+                  fill="url(#studGradient)"
                   transform={`rotate(${startAngle + angle / 2}, 50, 50)`}
                   className="drop-shadow-sm pointer-events-none"
                 />
-                
+
                 {/* Subtle Highlight */}
-                <path 
+                <path
                   d={`M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`}
                   fill="url(#wedgeHighlight)"
                   className="opacity-20 pointer-events-none"
@@ -267,16 +296,16 @@ const Wheel = ({
             </linearGradient>
           </defs>
         </svg>
-        
+
         {/* Center Hub Decoration */}
         <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
           <div className="w-24 h-24 rounded-full border-4 border-white/10 bg-black/20 backdrop-blur-sm shadow-[0_0_30px_rgba(0,0,0,0.5)]" />
           <div className="absolute w-20 h-20 rounded-full bg-gradient-to-br from-white/5 to-transparent blur-[2px]" />
         </div>
-        
+
         {/* Center Button */}
         <div className="absolute inset-0 flex items-center justify-center z-20">
-          <button 
+          <button
             onClick={spin}
             disabled={isSpinning}
             className={`w-16 h-16 rounded-full bg-gradient-to-br ${color} flex items-center justify-center shadow-[0_0_30px_rgba(255,45,85,0.5)] transform active:scale-95 transition-all duration-300 disabled:opacity-50 border-4 border-white/20`}
@@ -292,19 +321,19 @@ const Wheel = ({
 
 const TaskResultModal = ({ task, onClose }: { task: Task, onClose: () => void }) => {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-md"
     >
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.8, y: 50 }}
         animate={{ scale: 1, y: 0 }}
         className="max-w-md w-full glass-panel p-10 text-center space-y-8 relative overflow-hidden"
       >
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-romantic-pink to-transparent" />
-        
+
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-[0.3em] text-romantic-pink font-bold">Your Task</p>
           <h2 className="text-3xl font-serif italic text-white leading-tight">
@@ -312,22 +341,22 @@ const TaskResultModal = ({ task, onClose }: { task: Task, onClose: () => void })
           </h2>
         </div>
 
-        { (task.visual || task.image) && (
+        {(task.visual || task.image) && (
           <div className="flex justify-center py-4">
-            <motion.div 
+            <motion.div
               initial={{ scale: 0, rotate: -30 }}
               animate={{ scale: 1, rotate: 0 }}
-              transition={{ 
-                type: 'spring', 
-                damping: 10, 
+              transition={{
+                type: 'spring',
+                damping: 10,
                 stiffness: 100,
-                delay: 0.2 
+                delay: 0.2
               }}
               className="w-48 h-48 rounded-3xl bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center shadow-[0_0_50px_rgba(251,191,36,0.3)] border-2 border-white/30 relative group overflow-hidden"
             >
               {/* Animated Background Glow */}
               <div className="absolute inset-0 bg-gradient-to-tr from-amber-400/10 via-transparent to-white/10 animate-pulse" />
-              
+
               {/* Floating Particles (Simulated) */}
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-4 left-4 w-2 h-2 bg-white/40 rounded-full animate-ping" />
@@ -338,12 +367,12 @@ const TaskResultModal = ({ task, onClose }: { task: Task, onClose: () => void })
               <div className="absolute -top-3 -right-3 bg-gradient-to-r from-amber-400 to-amber-600 text-black text-[12px] font-black px-3 py-1 rounded-full shadow-[0_4px_10px_rgba(0,0,0,0.3)] uppercase tracking-widest border border-white/20 z-10">
                 Heavenly
               </div>
-              
+
               <div className="relative z-10 w-full h-full flex items-center justify-center p-4">
                 {task.image ? (
-                  <img 
-                    src={task.image} 
-                    alt={task.text} 
+                  <img
+                    src={task.image}
+                    alt={task.text}
                     className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]"
                     referrerPolicy="no-referrer"
                   />
@@ -353,7 +382,7 @@ const TaskResultModal = ({ task, onClose }: { task: Task, onClose: () => void })
                   </span>
                 )}
               </div>
-              
+
               {/* Shine Effect */}
               <div className="absolute -inset-full bg-gradient-to-r from-transparent via-white/10 to-transparent rotate-45 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
             </motion.div>
@@ -366,7 +395,7 @@ const TaskResultModal = ({ task, onClose }: { task: Task, onClose: () => void })
           </div>
         </div>
 
-        <button 
+        <button
           onClick={onClose}
           className="w-full py-4 bg-white/10 hover:bg-white/20 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 group"
         >
@@ -388,7 +417,7 @@ const PremiumLock = ({ mode, onUnlock }: { mode: ModeConfig, onUnlock: () => voi
         <h3 className="font-bold text-lg">{mode.name} Mode</h3>
         <p className="text-sm text-gray-400">Unlock this premium experience</p>
       </div>
-      <button 
+      <button
         onClick={onUnlock}
         className="px-6 py-2 bg-amber-400 text-black font-bold rounded-full text-sm hover:bg-amber-300 transition-colors"
       >
@@ -399,12 +428,13 @@ const PremiumLock = ({ mode, onUnlock }: { mode: ModeConfig, onUnlock: () => voi
 };
 
 
-const AdminLogin = ({ 
-  onLogin, 
-  onClose 
-}: { 
-  onLogin: () => void, 
-  onClose: () => void 
+
+const AdminLogin = ({
+  onLogin,
+  onClose
+}: {
+  onLogin: () => void,
+  onClose: () => void
 }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -421,13 +451,13 @@ const AdminLogin = ({
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex items-center justify-center p-6"
     >
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         className="max-w-sm w-full glass-panel p-8 space-y-6 text-center"
@@ -442,8 +472,8 @@ const AdminLogin = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <input 
-              type="password" 
+            <input
+              type="password"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -453,14 +483,14 @@ const AdminLogin = ({
             {error && <p className="text-red-400 text-xs">{error}</p>}
           </div>
           <div className="flex gap-3">
-            <button 
+            <button
               type="button"
               onClick={onClose}
               className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-lg font-bold transition-colors"
             >
               Cancel
             </button>
-            <button 
+            <button
               type="submit"
               className="flex-1 py-3 bg-amber-400 text-black font-bold rounded-lg hover:bg-amber-300 transition-colors"
             >
@@ -473,14 +503,14 @@ const AdminLogin = ({
   );
 };
 
-const AdminPanel = ({ 
-  modes, 
-  onUpdate, 
-  onClose 
-}: { 
-  modes: ModeConfig[], 
+const AdminPanel = ({
+  modes,
+  onUpdate,
+  onClose
+}: {
+  modes: ModeConfig[],
   onUpdate: (newConfig: ModeConfig[]) => void,
-  onClose: () => void 
+  onClose: () => void
 }) => {
   const [editingMode, setEditingMode] = useState<ModeConfig | null>(null);
   const [localModes, setLocalModes] = useState<ModeConfig[]>(modes);
@@ -501,7 +531,7 @@ const AdminPanel = ({
 
   const handleImageUpload = (modeId: string, taskId: string, file: File) => {
     setUploadError(null);
-    
+
     // 500KB limit check
     if (file.size > 500 * 1024) {
       setUploadError(`Image too large (${(file.size / 1024).toFixed(0)}KB). Max limit is 500KB.`);
@@ -521,7 +551,7 @@ const AdminPanel = ({
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="fixed inset-0 z-[100] bg-romantic-black overflow-y-auto p-6"
@@ -540,7 +570,7 @@ const AdminPanel = ({
                 {uploadError}
               </p>
             )}
-            <button 
+            <button
               onClick={saveConfig}
               className="px-8 py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
             >
@@ -555,11 +585,10 @@ const AdminPanel = ({
             <button
               key={mode.id}
               onClick={() => setEditingMode(mode)}
-              className={`p-6 rounded-2xl border-2 transition-all text-left space-y-2 ${
-                editingMode?.id === mode.id 
-                  ? 'border-romantic-pink bg-romantic-pink/10' 
-                  : 'border-white/10 bg-white/5 hover:border-white/20'
-              }`}
+              className={`p-6 rounded-2xl border-2 transition-all text-left space-y-2 ${editingMode?.id === mode.id
+                ? 'border-romantic-pink bg-romantic-pink/10'
+                : 'border-white/10 bg-white/5 hover:border-white/20'
+                }`}
             >
               <span className="text-3xl">{mode.icon}</span>
               <h3 className="font-bold uppercase tracking-widest text-sm">{mode.name}</h3>
@@ -569,7 +598,7 @@ const AdminPanel = ({
         </div>
 
         {editingMode && (
-          <motion.div 
+          <motion.div
             key={editingMode.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -589,7 +618,7 @@ const AdminPanel = ({
                   <div className="flex-1 space-y-4 w-full">
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">Task Text</label>
-                      <input 
+                      <input
                         type="text"
                         value={task.text}
                         onChange={(e) => handleTaskChange(editingMode.id, task.id, 'text', e.target.value)}
@@ -598,7 +627,7 @@ const AdminPanel = ({
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">Emoji Visual (Optional)</label>
-                      <input 
+                      <input
                         type="text"
                         value={task.visual || ''}
                         onChange={(e) => handleTaskChange(editingMode.id, task.id, 'visual', e.target.value)}
@@ -616,9 +645,9 @@ const AdminPanel = ({
                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <label className="cursor-pointer p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
                               <Upload className="w-6 h-6" />
-                              <input 
-                                type="file" 
-                                className="hidden" 
+                              <input
+                                type="file"
+                                className="hidden"
                                 accept="image/*"
                                 onChange={(e) => e.target.files?.[0] && handleImageUpload(editingMode.id, task.id, e.target.files[0])}
                               />
@@ -629,9 +658,9 @@ const AdminPanel = ({
                         <label className="cursor-pointer flex flex-col items-center gap-2 text-gray-500 hover:text-white transition-colors">
                           <Upload className="w-8 h-8" />
                           <span className="text-[10px] font-bold">Upload Image</span>
-                          <input 
-                            type="file" 
-                            className="hidden" 
+                          <input
+                            type="file"
+                            className="hidden"
                             accept="image/*"
                             onChange={(e) => e.target.files?.[0] && handleImageUpload(editingMode.id, task.id, e.target.files[0])}
                           />
@@ -639,7 +668,7 @@ const AdminPanel = ({
                       )}
                     </div>
                     {task.image && (
-                      <button 
+                      <button
                         onClick={() => handleTaskChange(editingMode.id, task.id, 'image', '')}
                         className="w-full py-2 text-[10px] uppercase font-bold text-red-400 hover:text-red-300 transition-colors flex items-center justify-center gap-1"
                       >
@@ -664,8 +693,11 @@ export default function App() {
   const [isAgeVerified, setIsAgeVerified] = useState(false);
   const [modes, setModes] = useState<ModeConfig[]>(MODES);
   const [currentMode, setCurrentMode] = useState<ModeConfig>(MODES[0]);
+  const [pendingMode, setPendingMode] = useState<ModeConfig | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const [resultTask, setResultTask] = useState<Task | null>(null);
+  const [showConsent, setShowConsent] = useState(false);
+  const [consentedModes, setConsentedModes] = useState<Set<Mode>>(new Set());
   const [unlockedModes, setUnlockedModes] = useState<Set<Mode>>(new Set([Mode.FLIRTY, Mode.HOT]));
   const [isMuted, setIsMuted] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -683,34 +715,31 @@ export default function App() {
     return () => window.removeEventListener('mousemove', handleGlobalMouseMove);
   }, []);
 
-  // (long-distance feature removed, app is now purely local)
-  const [remoteRotation, setRemoteRotation] = useState<number | undefined>(undefined);
+
 
   const handleModeChange = (mode: ModeConfig) => {
     if (isSpinning) return;
-    
-    // requiresConsent removed from modes; directly set mode.
-    
+
+    if (mode.requiresConsent && !consentedModes.has(mode.id)) {
+      setPendingMode(mode);
+      setShowConsent(true);
+      return;
+    }
+
     setCurrentMode(mode);
   };
 
   const handleConfigUpdate = (newConfig: ModeConfig[]) => {
-    // No realtime backend in this deployment; apply locally.
     setModes(newConfig);
   };
 
-
-
-  const handleSpinStart = (rotation: number) => {
-    // No-op for static deployment (no realtime sync).
-  };
-
-  const copyCode = () => {
-    if (roomCode) {
-      navigator.clipboard.writeText(roomCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+  const handleConsentConfirm = () => {
+    if (pendingMode) {
+      setConsentedModes(prev => new Set(prev).add(pendingMode.id));
+      setCurrentMode(pendingMode);
+      setPendingMode(null);
     }
+    setShowConsent(false);
   };
 
   const handleUnlock = (modeId: Mode) => {
@@ -728,19 +757,19 @@ export default function App() {
         <div className="space-y-1">
           <h1 className="text-2xl font-serif italic tracking-wide text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">SpinPlay</h1>
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-500 font-bold">
-            <div className={`w-2 h-2 rounded-full ${isPaired ? 'bg-indigo-500 glow-indigo' : 'bg-green-500'} animate-pulse`} />
-            {isPaired ? 'Paired Session Active' : 'Private Session Active'}
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            Private Session Active
           </div>
         </div>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={() => setShowAdminLogin(true)}
             className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
             title="Admin Panel"
           >
             <Settings className="w-5 h-5 text-gray-400" />
           </button>
-          <button 
+          <button
             onClick={() => setIsMuted(!isMuted)}
             className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
           >
@@ -752,89 +781,85 @@ export default function App() {
         </div>
       </header>
 
-        <>
-          {/* Mode Selector */}
-          <div className="mb-12 overflow-x-auto no-scrollbar flex gap-4 pb-4">
-            {modes.map((mode) => {
-              const isActive = currentMode.id === mode.id;
-              const isLocked = mode.isPremium && !unlockedModes.has(mode.id);
-              
-              return (
-                <button
-                  key={mode.id}
-                  onClick={() => {
-                    if (isLocked) {
-                      handleUnlock(mode.id);
-                    } else {
-                      handleModeChange(mode);
-                    }
-                  }}
-                  className={`shrink-0 flex flex-col items-center gap-2 p-4 rounded-2xl transition-all duration-300 min-w-[100px] relative group ${
-                    isActive 
-                      ? `bg-gradient-to-br ${mode.color} shadow-[0_0_20px_rgba(255,45,85,0.4)] scale-105` 
-                      : 'bg-white/5 hover:bg-white/10'
+      <>
+        {/* Mode Selector */}
+        <div className="mb-12 overflow-x-auto no-scrollbar flex gap-4 pb-4">
+          {modes.map((mode) => {
+            const isActive = currentMode.id === mode.id;
+            const isLocked = mode.isPremium && !unlockedModes.has(mode.id);
+
+            return (
+              <button
+                key={mode.id}
+                onClick={() => {
+                  if (isLocked) {
+                    handleUnlock(mode.id);
+                  } else {
+                    handleModeChange(mode);
+                  }
+                }}
+                className={`shrink-0 flex flex-col items-center gap-2 p-4 rounded-2xl transition-all duration-300 min-w-[100px] relative group ${isActive
+                  ? `bg-gradient-to-br ${mode.color} shadow-[0_0_20px_rgba(255,45,85,0.4)] scale-105`
+                  : 'bg-white/5 hover:bg-white/10'
                   }`}
-                >
-                  {isActive && (
-                    <div className="absolute -inset-1 bg-gradient-to-br from-white/20 to-transparent rounded-2xl blur-[2px] opacity-50" />
-                  )}
-                  <span className="text-2xl relative z-10 group-hover:scale-110 transition-transform">{mode.icon}</span>
-                  <div className="text-center relative z-10">
-                    <p className={`text-xs font-bold uppercase tracking-tighter ${isActive ? 'text-white' : 'text-gray-400'}`}>
-                      {mode.name}
-                    </p>
-                    {isLocked && <Lock className="w-3 h-3 mx-auto mt-1 text-amber-400" />}
-                  </div>
-                </button>
-              );
-            })}
+              >
+                {isActive && (
+                  <div className="absolute -inset-1 bg-gradient-to-br from-white/20 to-transparent rounded-2xl blur-[2px] opacity-50" />
+                )}
+                <span className="text-2xl relative z-10 group-hover:scale-110 transition-transform">{mode.icon}</span>
+                <div className="text-center relative z-10">
+                  <p className={`text-xs font-bold uppercase tracking-tighter ${isActive ? 'text-white' : 'text-gray-400'}`}>
+                    {mode.name}
+                  </p>
+                  {isLocked && <Lock className="w-3 h-3 mx-auto mt-1 text-amber-400" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Main Wheel Area */}
+        <main className="flex-1 flex flex-col items-center justify-center relative">
+          <div className="mb-12 text-center relative">
+            <div className="absolute -inset-4 bg-romantic-pink/20 blur-2xl rounded-full animate-pulse" />
+            <h2 className="text-sm uppercase tracking-[0.5em] text-romantic-pink font-bold mb-2">Spin the Wheel</h2>
+            <h3 className="text-5xl font-serif italic text-white drop-shadow-[0_0_10px_rgba(255,45,85,0.5)]">
+              {currentMode.name}
+            </h3>
           </div>
 
-          {/* Main Wheel Area */}
-          <main className="flex-1 flex flex-col items-center justify-center relative">
-            <div className="mb-12 text-center relative">
-              <div className="absolute -inset-4 bg-romantic-pink/20 blur-2xl rounded-full animate-pulse" />
-              <h2 className="text-sm uppercase tracking-[0.5em] text-romantic-pink font-bold mb-2">Spin the Wheel</h2>
-              <h3 className="text-5xl font-serif italic text-white drop-shadow-[0_0_10px_rgba(255,45,85,0.5)]">
-                {currentMode.name}
-              </h3>
-            </div>
+          <div className="relative">
+            <Wheel
+              tasks={currentMode.tasks}
+              color={currentMode.color}
+              isSpinning={isSpinning}
+              setIsSpinning={setIsSpinning}
+              onResult={(task) => setResultTask(task)}
+              isMuted={isMuted}
+              onHoverTask={setHoveredTask}
+            />
 
-            <div className="relative">
-              <Wheel 
-                tasks={currentMode.tasks} 
-                color={currentMode.color}
-                isSpinning={isSpinning}
-                setIsSpinning={setIsSpinning}
-                onResult={(task) => setResultTask(task)}
-                onSpinStart={handleSpinStart}
-                remoteRotation={remoteRotation}
-                isMuted={isMuted}
-                onHoverTask={setHoveredTask}
-              />
-              
-              {/* Subtle Glow Background */}
-              <div className={`absolute inset-0 -z-10 blur-[100px] opacity-20 bg-gradient-to-br ${currentMode.color}`} />
-            </div>
+            {/* Subtle Glow Background */}
+            <div className={`absolute inset-0 -z-10 blur-[100px] opacity-20 bg-gradient-to-br ${currentMode.color}`} />
+          </div>
 
-            <div className="mt-12 text-center">
-              <p className="text-xs text-gray-500 italic max-w-[250px]">
-                "The journey to intimacy is a shared path. Enjoy every moment together."
-              </p>
-            </div>
-          </main>
-        </>
-      )}
+          <div className="mt-12 text-center">
+            <p className="text-xs text-gray-500 italic max-w-[250px]">
+              "The journey to intimacy is a shared path. Enjoy every moment together."
+            </p>
+          </div>
+        </main>
+      </>
 
       {/* Footer / Exit */}
       <footer className="mt-auto pt-8 flex flex-col items-center gap-6">
-        <button 
+        <button
           onClick={() => window.location.reload()}
           className="px-12 py-3 bg-indigo-900/50 border-2 border-indigo-500 rounded-lg text-indigo-200 font-bold tracking-widest hover:bg-indigo-800 transition-all shadow-[0_0_20px_rgba(99,102,241,0.4)] active:scale-95 hover:shadow-[0_0_30px_rgba(99,102,241,0.6)]"
         >
           BACK
         </button>
-        
+
         <div className="flex items-center gap-2 text-gray-600 text-[10px] uppercase tracking-widest">
           <ShieldCheck className="w-3 h-3" />
           End-to-End Encrypted Session
@@ -844,7 +869,7 @@ export default function App() {
       {/* Modals */}
       <AnimatePresence>
         {showAdminLogin && (
-          <AdminLogin 
+          <AdminLogin
             onLogin={() => {
               setIsAdmin(true);
               setShowAdminLogin(false);
@@ -853,17 +878,26 @@ export default function App() {
           />
         )}
         {isAdmin && (
-          <AdminPanel 
-            modes={modes} 
-            onUpdate={handleConfigUpdate} 
-            onClose={() => setIsAdmin(false)} 
+          <AdminPanel
+            modes={modes}
+            onUpdate={handleConfigUpdate}
+            onClose={() => setIsAdmin(false)}
           />
         )}
-        
+        {showConsent && pendingMode && (
+          <ConsentModal
+            mode={pendingMode}
+            onConfirm={handleConsentConfirm}
+            onCancel={() => {
+              setShowConsent(false);
+              setPendingMode(null);
+            }}
+          />
+        )}
         {resultTask && (
-          <TaskResultModal 
-            task={resultTask} 
-            onClose={() => setResultTask(null)} 
+          <TaskResultModal
+            task={resultTask}
+            onClose={() => setResultTask(null)}
           />
         )}
       </AnimatePresence>
@@ -876,16 +910,16 @@ export default function App() {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             className="fixed z-[9999] pointer-events-none"
-            style={{ 
-              left: mousePos.x + 20, 
-              top: mousePos.y + 20 
+            style={{
+              left: mousePos.x + 20,
+              top: mousePos.y + 20
             }}
           >
             <div className="bg-romantic-purple/90 backdrop-blur-xl px-4 py-2 rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-white/20 glow-purple flex items-center gap-3">
               {hoveredTask.image ? (
-                <img 
-                  src={hoveredTask.image} 
-                  alt={hoveredTask.text} 
+                <img
+                  src={hoveredTask.image}
+                  alt={hoveredTask.text}
                   className="w-10 h-10 object-contain bg-white/10 rounded-lg p-1"
                   referrerPolicy="no-referrer"
                 />
