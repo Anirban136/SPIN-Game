@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from './supabase';
 import {
   Sparkles,
   RotateCcw,
@@ -134,8 +135,6 @@ const Wheel = ({
   isSpinning,
   setIsSpinning,
   color,
-  onSpinStart,
-  remoteRotation,
   isMuted,
   onHoverTask
 }: {
@@ -506,11 +505,13 @@ const AdminLogin = ({
 const AdminPanel = ({
   modes,
   onUpdate,
-  onClose
+  onClose,
+  isSaving
 }: {
   modes: ModeConfig[],
   onUpdate: (newConfig: ModeConfig[]) => void,
-  onClose: () => void
+  onClose: () => void,
+  isSaving: boolean
 }) => {
   const [editingMode, setEditingMode] = useState<ModeConfig | null>(null);
   const [localModes, setLocalModes] = useState<ModeConfig[]>(modes);
@@ -572,10 +573,11 @@ const AdminPanel = ({
             )}
             <button
               onClick={saveConfig}
-              className="px-8 py-3 bg-green-600 hover:bg-green-500 rounded-xl font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+              disabled={isSaving}
+              className={`px-8 py-3 ${isSaving ? 'bg-gray-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-500'} rounded-xl font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.3)]`}
             >
               <Save className="w-5 h-5" />
-              Save Changes
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>
@@ -691,8 +693,19 @@ const AdminPanel = ({
 
 export default function App() {
   const [isAgeVerified, setIsAgeVerified] = useState(false);
-  const [modes, setModes] = useState<ModeConfig[]>(MODES);
-  const [currentMode, setCurrentMode] = useState<ModeConfig>(MODES[0]);
+  const [modes, setModes] = useState<ModeConfig[]>(() => {
+    // Try to load from localStorage first
+    try {
+      const savedConfig = localStorage.getItem('spinplay-config');
+      if (savedConfig) {
+        return JSON.parse(savedConfig);
+      }
+    } catch (e) {
+      console.warn('Failed to load config from localStorage:', e);
+    }
+    return MODES;
+  });
+  const [currentMode, setCurrentMode] = useState<ModeConfig>(modes[0]);
   const [pendingMode, setPendingMode] = useState<ModeConfig | null>(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const [resultTask, setResultTask] = useState<Task | null>(null);
@@ -702,6 +715,30 @@ export default function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Load configuration from Supabase on mount
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('modes_config')
+          .select('data')
+          .eq('id', 1)
+          .single();
+
+        if (data && data.data && data.data.length > 0) {
+          setModes(data.data);
+          // Only update current mode if it matches initialized mode's id
+          setCurrentMode(data.data.find((m: ModeConfig) => m.id === currentMode.id) || data.data[0]);
+        }
+      } catch (err) {
+        console.error('Failed to load config from Supabase:', err);
+      }
+    };
+    loadConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Tooltip State
   const [hoveredTask, setHoveredTask] = useState<Task | null>(null);
@@ -729,8 +766,67 @@ export default function App() {
     setCurrentMode(mode);
   };
 
-  const handleConfigUpdate = (newConfig: ModeConfig[]) => {
+  const handleConfigUpdate = async (newConfig: ModeConfig[]) => {
+    setIsSaving(true);
+    // Determine current mode's new state based on newConfig
+    const currentModeId = currentMode ? currentMode.id : newConfig[0].id;
+    const updatedCurrentMode = newConfig.find(m => m.id === currentModeId) || newConfig[0];
+
+    // Update UI optimistically
     setModes(newConfig);
+    setCurrentMode(updatedCurrentMode);
+
+    // Deep copy to process images
+    const processedConfig = JSON.parse(JSON.stringify(newConfig)) as ModeConfig[];
+
+    // Process all images to upload to Supabase Storage
+    for (const mode of processedConfig) {
+      for (const task of mode.tasks) {
+        const imageData = (task.image && task.image.startsWith('data:image')) ? task.image :
+          (task.visual && task.visual.startsWith('data:image')) ? task.visual : null;
+
+        if (imageData) {
+          try {
+            const res = await fetch(imageData);
+            const blob = await res.blob();
+            const fileName = `task-${task.id}-${Date.now()}.png`;
+
+            const { data, error } = await supabase.storage
+              .from('images')
+              .upload(fileName, blob, { contentType: 'image/png', upsert: true });
+
+            if (data && !error) {
+              const { data: { publicUrl } } = supabase.storage
+                .from('images')
+                .getPublicUrl(fileName);
+
+              task.image = publicUrl;
+              // Clear visual if it was a data URL to keep database clean
+              if (task.visual && task.visual.startsWith('data:image')) {
+                task.visual = '';
+              }
+            }
+          } catch (e) {
+            console.error('Image upload to Supabase failed:', e);
+          }
+        }
+      }
+    }
+
+    // Save processed config back to local state and Supabase
+    setModes(processedConfig);
+
+    try {
+      localStorage.setItem('spinplay-config', JSON.stringify(processedConfig));
+    } catch (e) { }
+
+    try {
+      await supabase.from('modes_config').upsert({ id: 1, data: processedConfig });
+    } catch (err) {
+      console.error('Failed to save config to Supabase', err);
+    }
+
+    setIsSaving(false);
   };
 
   const handleConsentConfirm = () => {
@@ -750,8 +846,12 @@ export default function App() {
     return <AgeVerification onVerify={() => setIsAgeVerified(true)} />;
   }
 
+  if (!currentMode) {
+    return <div className="min-h-screen bg-romantic-black flex items-center justify-center">Loading...</div>;
+  }
+
   return (
-    <div className="min-h-screen flex flex-col max-w-lg mx-auto px-4 py-8">
+    <div className="min-h-screen bg-romantic-black flex flex-col max-w-lg mx-auto px-4 py-8">
       {/* Header */}
       <header className="flex justify-between items-center mb-12">
         <div className="space-y-1">
@@ -882,6 +982,7 @@ export default function App() {
             modes={modes}
             onUpdate={handleConfigUpdate}
             onClose={() => setIsAdmin(false)}
+            isSaving={isSaving}
           />
         )}
         {showConsent && pendingMode && (
