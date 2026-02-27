@@ -61,7 +61,7 @@ export const MODES: ModeConfig[] = [
     icon: '😈',
     description: 'Advanced – Bold',
     color: 'from-purple-600 to-indigo-900',
-    requiresConsent: true,
+    requiresConsent: false,
     isPremium: true,
     tasks: [
       { id: 'n1', text: 'Remove one clothing item (consensual)' },
@@ -78,7 +78,7 @@ export const MODES: ModeConfig[] = [
       { id: 'n12', text: 'Freeze pose challenge' },
       { id: 'n13', text: 'Hand and leg bondage' },
       { id: 'n14', text: 'Spin again + remove one layer' },
-      { id: 'n15', text: 'Free bold move (mutual consent)' },
+      { id: 'n15', text: 'Free bold move' },
       { id: 'n16', text: 'Winner decides next action' },
     ],
   },
@@ -88,7 +88,7 @@ export const MODES: ModeConfig[] = [
     icon: '👼',
     description: 'Expert – Position Wheel',
     color: 'from-amber-400 to-yellow-600',
-    requiresConsent: true,
+    requiresConsent: false,
     isPremium: true,
     tasks: [
       { id: 'hv1', text: 'Missionary Position', visual: '👩‍❤️‍👨', image: 'https://images.unsplash.com/photo-1518131359073-ad293c3f90c9?q=80&w=1000&auto=format&fit=crop' },

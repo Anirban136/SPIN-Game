@@ -70,7 +70,7 @@ let gameConfig = [
     icon: '😈',
     description: 'Advanced – Bold',
     color: 'from-purple-600 to-indigo-900',
-    requiresConsent: true,
+    requiresConsent: false,
     isPremium: true,
     tasks: [
       { id: 'n1', text: 'Remove one clothing item (consensual)' },
@@ -87,7 +87,7 @@ let gameConfig = [
       { id: 'n12', text: 'Freeze pose challenge' },
       { id: 'n13', text: 'Hand and leg bondage' },
       { id: 'n14', text: 'Spin again + remove one layer' },
-      { id: 'n15', text: 'Free bold move (mutual consent)' },
+      { id: 'n15', text: 'Free bold move' },
       { id: 'n16', text: 'Winner decides next action' },
     ],
   },
@@ -131,7 +131,7 @@ async function startServer() {
     },
   });
 
-  const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+  const PORT = 3000;
 
   // In-memory room storage
   const rooms = new Map<string, { players: string[]; state: any }>();
